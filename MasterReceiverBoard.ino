@@ -147,7 +147,7 @@ void writeBoardData(Data boardDataReading)
 	boardReadingJsonTree["Temperature"] = boardDataReading.temp;
 	boardReadingJsonTree["Humidity"] = boardDataReading.humidity;
 	boardReadingJsonTree["TimeRecorded"] = formattedTime;
-	Firebase.push(ROOT + String(boardDataReading.id) + "/" + currentDate + "/readings/" + formattedTime, boardReadingJsonTree);
+	Firebase.set(ROOT + String(boardDataReading.id) + "/" + "/readings/" + currentDate + "/" + formattedTime, boardReadingJsonTree);
 	if (Firebase.failed())
 	{
 		Serial.println(Firebase.error());
