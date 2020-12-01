@@ -19,8 +19,6 @@ volatile int boardToUpdate = 0;
 #define FIREBASE_HOST "temperaturesensornetwork.firebaseio.com"
 #define FIREBASE_AUTH "0ZvLeOQcR4kctBdbYTR7BIFXpWibMMHYCVnjp05D"
 
-String months[12] = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
-
 //The definition of our Data.
 struct Data
 {
@@ -108,13 +106,9 @@ void connectToFirebase()
 void connectToTimeClient()
 {
 	timeClient.begin();
-	// GMT +1 = 3600
-	// GMT +8 = 28800
-	// GMT -1 = -3600
-	// GMT -8 = -28800
-	// GMT 0 = 0
-	//Vancouver Time, 8 hours before GMT
-	timeClient.setTimeOffset(-28800);
+	// Vancouver Time, GMT -8 = -28800 
+	// Calgary Time, GMT -7 = -25200
+	timeClient.setTimeOffset(-25200);
 	timeClient.update();
 }
 
@@ -137,9 +131,6 @@ void writeBoardData(Data boardDataReading)
 	String currentDate = getCurrentDate();
 	String formattedTime = timeClient.getFormattedTime();
 
-	//Firebase.setFloat(ROOT + String(boardDataReading.id) + "/" + currentDate + "/temperature/" + formattedTime, boardDataReading.temp);
-	//Firebase.setFloat(ROOT + String(boardDataReading.id) + "/" + currentDate + "/humidity/" + formattedTime, boardDataReading.humidity);
-
 	StaticJsonBuffer<200> jsonBuffer;
 	JsonObject& boardReadingJsonTree = jsonBuffer.createObject();
 	boardReadingJsonTree["Id"] = boardDataReading.id;
@@ -147,7 +138,11 @@ void writeBoardData(Data boardDataReading)
 	boardReadingJsonTree["Temperature"] = boardDataReading.temp;
 	boardReadingJsonTree["Humidity"] = boardDataReading.humidity;
 	boardReadingJsonTree["TimeRecorded"] = formattedTime;
-	Firebase.set(ROOT + String(boardDataReading.id) + "/" + "/readings/" + currentDate + "/" + formattedTime, boardReadingJsonTree);
+	boardReadingJsonTree["TimeZone"] = "MST" // Calgary: MST, Vancouver: PST
+
+	// POST to firebase
+	Firebase.set(ROOT + String(boardDataReading.id) + "/" + "/readings/" + currentDate + "/" + timeClient.getHours(), boardReadingJsonTree);
+	
 	if (Firebase.failed())
 	{
 		Serial.println(Firebase.error());
@@ -155,6 +150,66 @@ void writeBoardData(Data boardDataReading)
 	else
 	{
 		Serial.printf("Uploaded Data for Board: %u \n", boardDataReading.id);
+	}
+	writeAverages(boardDataReading);
+}
+
+void writeAverages(Data boardDataReading) {
+	String currentDate = getCurrentDate();
+
+	// Fetch readings from current day
+	FirebaseObject dayReadings  = Firebase.get(ROOT + String(boardDataReading.id) + "/readings/" + currentDate);
+	
+	// Need to be switched to JsonVariant to be processed
+	JsonVariant dayReadingVariant = dayReadings.getJsonVariant();
+
+	float dailyTemperatureAverage = 0.0;
+	float dailyHumidityAverage = 0.0;
+	int recordingsFound = 0;
+
+	// For each hour of the day, grab the temperature and humidity reading
+	for(int i = 0; i < 24; i++) {
+		FirebaseObject temperatureRecord = Firebase.get(ROOT + String(boardDataReading.id) + "/readings/" + currentDate + "/" + i);
+		JsonVariant testPrinting = temperatureRecord.getJsonVariant();
+
+		int id = temperatureRecord.getInt("Id");
+		// If we missed a reading, we will fetch a default JSON object with default values
+		// Make sure we have a reading by checking against boardId
+		if (id != boardDataReading.id) {
+			continue;
+		}
+
+		float temperature = temperatureRecord.getFloat("Temperature");
+		float humidity = temperatureRecord.getFloat("Humidity");
+
+		dailyTemperatureAverage += temperature;
+		dailyHumidityAverage += humidity;
+		recordingsFound++;
+	}
+
+	dailyTemperatureAverage = dailyTemperatureAverage / recordingsFound;
+	dailyHumidityAverage = dailyHumidityAverage / recordingsFound;
+	
+	// Create JSON structure for daily average
+	StaticJsonBuffer<200> jsonBuffer;
+	JsonObject& dailyAverageJsonTree = jsonBuffer.createObject();
+	dailyAverageJsonTree["Board Location"] = boardDataReading.location;
+	dailyAverageJsonTree["Temperature Average"] = dailyTemperatureAverage;
+	dailyAverageJsonTree["Humidity Average"] = dailyHumidityAverage;
+
+	// Post to firebase
+	Firebase.set(ROOT + String(boardDataReading.id) + "/" + "/Statistics/" + currentDate, dailyAverageJsonTree);
+
+	if (Firebase.success()) {
+
+		Serial.println("-----------------Success-----------------\n");
+		Serial.println("Printed daily average to firebase");
+		Serial.println("-----------------Success-----------------\n");
+	}
+	else {
+		Serial.println("Firebase get failed");
+      	Serial.println(Firebase.error());
+      	return;
 	}
 }
 

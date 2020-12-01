@@ -30,7 +30,8 @@ struct Data {
 Data myData;
 
 unsigned long lastTime = 0;
-unsigned long timerDelay = 6000;
+// Delay is 1 hr
+unsigned long timerDelay = 3600000;
 
 // Callback when data is sent
 void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus) {
