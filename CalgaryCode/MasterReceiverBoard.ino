@@ -1,3 +1,14 @@
+/**
+ * Cassady Campos Steven Trinh
+ * Temperature Sensor Network
+ * CPSC 4210 Fall 2020
+ * 
+ * This file is loaded onto the receiver board. That will receive and post
+ * messages to our database. It will also run a calculation for temperature 
+ * averages and post that to our database.
+ *
+ * **/
+
 #include <FirebaseArduino.h>
 #include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
@@ -138,7 +149,7 @@ void writeBoardData(Data boardDataReading)
 	boardReadingJsonTree["Temperature"] = boardDataReading.temp;
 	boardReadingJsonTree["Humidity"] = boardDataReading.humidity;
 	boardReadingJsonTree["TimeRecorded"] = formattedTime;
-	boardReadingJsonTree["TimeZone"] = "MST" // Calgary: MST, Vancouver: PST
+	boardReadingJsonTree["TimeZone"] = "MST"; // Calgary: MST, Vancouver: PST
 
 	// POST to firebase
 	Firebase.set(ROOT + String(boardDataReading.id) + "/" + "/readings/" + currentDate + "/" + timeClient.getHours(), boardReadingJsonTree);

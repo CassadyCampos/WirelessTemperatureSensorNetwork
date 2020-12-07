@@ -1,3 +1,12 @@
+/**
+ * Cassady Campos
+ * Temperature Sensor Network
+ * CPSC 4210 Fall 2020
+ * 
+ * This file will be loaded onto Board 2 and it's delay is 0.5hr. It will send
+ * messages containing the ambient temperature and humidity on my computer desk 
+ *
+ * **/
 #include "DHT.h"
 #include <ESP8266WiFi.h>
 #include <espnow.h>
@@ -23,7 +32,7 @@ struct Data {
     int id;
     float temp;
     float humidity;
-    String location = "Computer Desk";
+    String location;
 };
 
 //The data we will be sending to our Receiver
@@ -31,7 +40,7 @@ Data myData;
 
 unsigned long lastTime = 0;
 // Delay is 1 hr, 5 mins
-unsigned long timerDelay = 3900000;
+unsigned long timerDelay = 1800000;
 
 // Callback when data is sent
 void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus) {
@@ -77,6 +86,7 @@ void loop() {
     myData.id = BOARD_ID;
     myData.temp = dht.readTemperature();
     myData.humidity = dht.readHumidity();
+    myData.location = "On Desk";
 
     //Send our myData object
     esp_now_send(0, (uint8_t *) &myData, sizeof(myData));
