@@ -3,7 +3,7 @@
  * Temperature Sensor Network
  * CPSC 4210 Fall 2020
  * 
- * This file is loaded onto the receiver board. That will receive and post
+ * This file is loaded onto the receiver board that will receive and post
  * messages to our database. It will also run a calculation for temperature 
  * averages and post that to our database.
  *
